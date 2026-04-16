@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -71,7 +71,26 @@ function extractParts(markdown: string): {
   return { title, subtitle, body: lines.slice(bodyStart).join("\n") };
 }
 
-export default function EssayClient({ markdown, date }: { markdown: string; date?: string }) {
+interface NavLink {
+  href: string;
+  label: string;
+}
+
+export default function EssayClient({
+  markdown,
+  date,
+  links,
+  slotMarker,
+  slot,
+  hero,
+}: {
+  markdown: string;
+  date?: string;
+  links?: NavLink[];
+  slotMarker?: string;
+  slot?: ReactNode;
+  hero?: ReactNode;
+}) {
   const [isDark, setIsDark] = useState(() => {
     if (typeof document !== "undefined") {
       return document.documentElement.classList.contains("dark");
@@ -96,6 +115,12 @@ export default function EssayClient({ markdown, date }: { markdown: string; date
   const { title, subtitle, body } = extractParts(markdown);
   const toc = extractToc(markdown);
 
+  const splitIndex =
+    slotMarker && slot ? body.indexOf(slotMarker) : -1;
+  const bodyBefore = splitIndex >= 0 ? body.slice(0, splitIndex) : body;
+  const bodyAfter =
+    splitIndex >= 0 ? body.slice(splitIndex + (slotMarker?.length ?? 0)) : "";
+
   return (
     <>
       <header className="site-header">
@@ -106,7 +131,7 @@ export default function EssayClient({ markdown, date }: { markdown: string; date
         >
           &#9776;
         </button>
-        <span className="author-name">Marlon Kuzmick</span>
+        <span className="author-name">Bok Oral Assessments Team</span>
         <div className="header-controls">
           <button
             className="copy-btn"
@@ -138,6 +163,8 @@ export default function EssayClient({ markdown, date }: { markdown: string; date
         onClick={() => setTocOpen(false)}
       />
 
+      {hero && <div className="hero-section">{hero}</div>}
+
       <div className="essay-layout">
         <nav className={`toc-sidebar${tocOpen ? " open" : ""}`}>
           <h2>Contents</h2>
@@ -157,27 +184,75 @@ export default function EssayClient({ markdown, date }: { markdown: string; date
           {subtitle && <p className="subtitle">{subtitle}</p>}
           {date && <p className="date">{date}</p>}
 
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              h1: () => null,
-              h2: ({ children }) => {
-                const text = String(children);
-                const id = slugify(text);
-                return <h2 id={id}>{children}</h2>;
-              },
-            }}
-          >
-            {body}
-          </ReactMarkdown>
+          {splitIndex < 0 ? (
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: () => null,
+                h2: ({ children }) => {
+                  const text = String(children);
+                  const id = slugify(text);
+                  return <h2 id={id}>{children}</h2>;
+                },
+              }}
+            >
+              {body}
+            </ReactMarkdown>
+          ) : (
+            <>
+              <ReactMarkdown
+                key="md-before"
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1: () => null,
+                  h2: ({ children }) => {
+                    const text = String(children);
+                    const id = slugify(text);
+                    return <h2 id={id}>{children}</h2>;
+                  },
+                }}
+              >
+                {bodyBefore}
+              </ReactMarkdown>
+              <div key="slot-content">{slot}</div>
+              <ReactMarkdown
+                key="md-after"
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1: () => null,
+                  h2: ({ children }) => {
+                    const text = String(children);
+                    const id = slugify(text);
+                    return <h2 id={id}>{children}</h2>;
+                  },
+                }}
+              >
+                {bodyAfter}
+              </ReactMarkdown>
+            </>
+          )}
         </article>
       </div>
 
+      {links && links.length > 0 && (
+        <nav className="page-links">
+          {links.map((link) => (
+            <Link key={link.href} href={link.href} className="page-link-btn">
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+      )}
+
       <footer className="site-footer">
         <div className="footer-inner">
-          <Link href="/">After Abundance</Link>
-          <Link href="/forward-sentries">Forward Sentries</Link>
-          <Link href="/oral-exams">Oral Exams</Link>
+          <Link href="/">Home</Link>
+          <Link href="/takes">Tools for Thinking</Link>
+          <Link href="/mk-first-draft">Full Briefing</Link>
+          <Link href="/forking-tree">Forking Tree</Link>
+          <Link href="/bgf-research">BGF Research</Link>
+          <Link href="/history-lens">History Lens</Link>
+          <Link href="/folklore-lens">Folklore Lens</Link>
         </div>
       </footer>
     </>
